@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>兔子回家 - Rabbit's Way Home</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(180deg, #87CEEB 0%, #E0F6FF 50%, #90EE90 100%);
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        h1 {
+            margin-bottom: 5px;
+            font-size: 1.6rem;
+            color: #2d5016;
+            text-align: center;
+        }
+
+        #subtitle {
+            color: #5a8a3a;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(6, 55px);
+            grid-template-rows: repeat(6, 55px);
+            gap: 3px;
+            background: rgba(139, 90, 43, 0.3);
+            padding: 8px;
+            border-radius: 12px;
+            border: 3px solid #8B4513;
+        }
+
+        .cell {
+            width: 55px;
+            height: 55px;
+            background: #C4A86B;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            position: relative;
+            transition: all 0.2s;
+            border: 1px solid rgba(139, 90, 43, 0.2);
+        }
+
+        .cell.grass {
+            background: #7CB342;
+        }
+
+        .cell.hole {
+            background: #5D4037;
+        }
+
+        .cell.hole::after {
+            content: '🕳️';
+            font-size: 1.6rem;
+            opacity: 0.9;
+        }
+
+        .cell.obstacle-tree {
+            background: #558B2F;
+        }
+
+        .cell.obstacle-tree::after {
+            content: '🌳';
+            font-size: 2rem;
+            position: absolute;
+        }
+
+        .cell.obstacle-puddle {
+            background: #4FC3F7;
+        }
+
+        .cell.obstacle-puddle::after {
+            content: '💧';
+            font-size: 1.6rem;
+            position: absolute;
+        }
+
+        #rabbit {
+            position: absolute;
+            font-size: 2.2rem;
+            z-index: 10;
+            transition: all 0.25s ease;
+            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3));
+        }
+
+        @keyframes hop {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-8px) scale(1.1); }
+        }
+
+        .hopping {
+            animation: hop 0.25s ease;
+        }
+
+        #controls {
+            display: flex;
+            gap: 12px;
+            margin-top: 5px;
+        }
+
+        .dir-btn {
+            width: 75px;
+            height: 75px;
+            font-size: 1.8rem;
+            background: #FFF8E1;
+            border: 3px solid #8B4513;
+            border-radius: 12px;
+            color: #5D4037;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            box-shadow: 0 4px 0 #6D4C41;
+        }
+
+        .dir-btn:hover {
+            background: #FFECB3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 #6D4C41;
+        }
+
+        .dir-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #6D4C41;
+        }
+
+        .dir-btn .pinyin-small {
+            font-size: 0.75rem;
+            color: #8B6914;
+            font-weight: bold;
+        }
+
+        .dir-btn.correct {
+            background: #C8E6C9;
+            border-color: #4CAF50;
+        }
+
+        .dir-btn.wrong {
+            background: #FFCDD2;
+            border-color: #F44336;
+            animation: shake 0.4s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+
+        #status {
+            margin-top: 10px;
+            font-size: 1.1rem;
+            min-height: 30px;
+            text-align: center;
+            color: #2d5016;
+            font-weight: 600;
+        }
+
+        #status.win {
+            color: #2E7D32;
+            font-size: 1.3rem;
+        }
+
+        #status.lose {
+            color: #C62828;
+        }
+
+        #level-info {
+            color: #5a8a3a;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        #bottom-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        #next-btn, #reset-btn {
+            padding: 10px 25px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            display: none;
+        }
+
+        #next-btn {
+            background: #66BB6A;
+            color: #fff;
+            box-shadow: 0 3px 0 #388E3C;
+        }
+
+        #next-btn:hover {
+            background: #81C784;
+            transform: translateY(-1px);
+        }
+
+        #reset-btn {
+            background: #FF7043;
+            color: #fff;
+            box-shadow: 0 3px 0 #D84315;
+            display: inline-block;
+        }
+
+        #reset-btn:hover {
+            background: #FF8A65;
+        }
+
+        .particle {
+            position: fixed;
+            pointer-events: none;
+            z-index: 100;
+            animation: float-up 1.2s ease-out forwards;
+        }
+
+        @keyframes float-up {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(-120px) rotate(360deg); opacity: 0; }
+        }
+
+        .carrot-popup {
+            position: fixed;
+            font-size: 3rem;
+            pointer-events: none;
+            z-index: 50;
+            animation: pop-and-fade 1s ease-out forwards;
+        }
+
+        @keyframes pop-and-fade {
+            0% { transform: scale(0); opacity: 0; }
+            30% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(1) translateY(-50px); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <h1>🐰 兔子回家</h1>
+    <div id="subtitle">Guide the rabbit to the hole!</div>
+    <div id="level-info">Level 1</div>
+
+    <div id="game-container">
+        <div id="grid"></div>
+
+        <div id="controls">
+            <button class="dir-btn" data-dir="left" onclick="move('left')">
+                左
+                <span class="pinyin-small">zuǒ</span>
+            </button>
+            <button class="dir-btn" data-dir="up" onclick="move('up')">
+                上
+                <span class="pinyin-small">shàng</span>
+            </button>
+            <button class="dir-btn" data-dir="down" onclick="move('down')">
+                下
+                <span class="pinyin-small">xià</span>
+            </button>
+            <button class="dir-btn" data-dir="right" onclick="move('right')">
+                右
+                <span class="pinyin-small">yòu</span>
+            </button>
+        </div>
+
+        <div id="status"></div>
+        <div id="bottom-controls">
+            <button id="reset-btn" onclick="resetLevel()">🔄 Retry</button>
+            <button id="next-btn" onclick="nextLevel()">Next Level →</button>
+        </div>
+    </div>
+
+    <script>
+        const GRID_SIZE = 6;
+        let rabbitPos = { x: 0, y: 0 };
+        let holePos = { x: 5, y: 5 };
+        let gameActive = true;
+        let level = 1;
+        let currentObstacles = [];
+
+        const directions = {
+            up:    { hanzi: '上', pinyin: 'shàng',  dx: 0,  dy: -1 },
+            down:  { hanzi: '下', pinyin: 'xià',    dx: 0,  dy: 1 },
+            left:  { hanzi: '左', pinyin: 'zuǒ',    dx: -1, dy: 0 },
+            right: { hanzi: '右', pinyin: 'yòu',    dx: 1,  dy: 0 }
+        };
+
+        // Level map legend: R=rabbit, H=hole, 1=tree, 2=puddle, .=grass
+        const levelMaps = [
+            // Level 1: Top-left to bottom-right (diagonal)
+            [
+                "R..1..",
+                "...1..",
+                "...1..",
+                "......",
+                "..11..",
+                ".....H"
+            ],
+            // Level 2: Bottom-left to top-right
+            [
+                ".....H",
+                "..11..",
+                "......",
+                "...1..",
+                "...1..",
+                "R..1.."
+            ],
+            // Level 3: Top-right to bottom-left
+            [
+                "..1..R",
+                "..1...",
+                "......",
+                "...11.",
+                "......",
+                "H....."
+            ],
+            // Level 4: Bottom-right to top-left
+            [
+                "H.....",
+                "......",
+                ".11...",
+                "......",
+                "...1..",
+                ".....R"
+            ],
+            // Level 5: Left edge center to right edge center
+            [
+                "......",
+                "R.1...",
+                "...1..",
+                "...1..",
+                "...1..",
+                ".....H"
+            ],
+            // Level 6: Top edge center to bottom edge center
+            [
+                "..R...",
+                "..1...",
+                "..1...",
+                "......",
+                ".11...",
+                "..H..."
+            ],
+            // Level 7: Top-left to top-right (must go down and around)
+            [
+                "R....H",
+                ".111..",
+                "......",
+                "...2..",
+                "......",
+                "......"
+            ],
+            // Level 8: Bottom-right to top-left (complex maze)
+            [
+                "H.1...",
+                "...1..",
+                "...1..",
+                ".222..",
+                "...1..",
+                ".....R"
+            ]
+        ];
+
+        const gridEl = document.getElementById('grid');
+        const statusEl = document.getElementById('status');
+        const nextBtn = document.getElementById('next-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const levelInfoEl = document.getElementById('level-info');
+
+        function init() {
+            loadLevel(0);
+        }
+
+        function parseLevel(mapIndex) {
+            const map = levelMaps[mapIndex % levelMaps.length];
+            currentObstacles = [];
+            let rPos = { x: 0, y: 0 };
+            let hPos = { x: 5, y: 5 };
+
+            for (let y = 0; y < GRID_SIZE; y++) {
+                const row = map[y] || '......';
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    const char = row[x] || '.';
+                    if (char === 'R') rPos = { x, y };
+                    if (char === 'H') hPos = { x, y };
+                    if (char === '1') currentObstacles.push({ x, y, type: 'tree' });
+                    if (char === '2') currentObstacles.push({ x, y, type: 'puddle' });
+                }
+            }
+            return { rPos, hPos };
+        }
+
+        function loadLevel(lvlIndex) {
+            level = lvlIndex + 1;
+            const config = parseLevel(lvlIndex);
+            
+            rabbitPos = { ...config.rPos };
+            holePos = { ...config.hPos };
+            gameActive = true;
+
+            levelInfoEl.textContent = `Level ${level}`;
+            renderGrid();
+            statusEl.textContent = '';
+            statusEl.className = '';
+            nextBtn.style.display = 'none';
+            resetBtn.style.display = 'inline-block';
+        }
+
+        function getObstacleAt(x, y) {
+            return currentObstacles.find(obs => obs.x === x && obs.y === y);
+        }
+
+        function renderGrid() {
+            gridEl.innerHTML = '';
+
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.x = x;
+                    cell.dataset.y = y;
+
+                    const obs = getObstacleAt(x, y);
+                    if (obs) {
+                        cell.classList.add(obs.type === 'tree' ? 'obstacle-tree' : 'obstacle-puddle');
+                    } else {
+                        cell.classList.add('grass');
+                    }
+
+                    if (x === holePos.x && y === holePos.y) {
+                        cell.classList.add('hole');
+                        cell.classList.remove('grass');
+                    }
+
+                    if (x === rabbitPos.x && y === rabbitPos.y) {
+                        const rabbit = document.createElement('div');
+                        rabbit.id = 'rabbit';
+                        rabbit.textContent = '🐰';
+                        cell.appendChild(rabbit);
+                    }
+
+                    gridEl.appendChild(cell);
+                }
+            }
+        }
+
+        function move(direction) {
+            if (!gameActive) return;
+
+            const dir = directions[direction];
+            const newX = rabbitPos.x + dir.dx;
+            const newY = rabbitPos.y + dir.dy;
+
+            if (newX < 0 || newX >= GRID_SIZE || newY < 0 || newY >= GRID_SIZE) {
+                showFeedback(direction, false, "Can't go that way!");
+                return;
+            }
+
+            const obs = getObstacleAt(newX, newY);
+            if (obs) {
+                const msg = obs.type === 'tree' ? "A tree blocks the way!" : "A puddle! Too wet!";
+                showFeedback(direction, false, msg);
+                return;
+            }
+
+            rabbitPos.x = newX;
+            rabbitPos.y = newY;
+            showFeedback(direction, true, '');
+
+            const rabbitEl = document.getElementById('rabbit');
+            if (rabbitEl) {
+                rabbitEl.classList.add('hopping');
+                setTimeout(() => rabbitEl.classList.remove('hopping'), 250);
+            }
+
+            renderGrid();
+
+            if (rabbitPos.x === holePos.x && rabbitPos.y === holePos.y) {
+                gameActive = false;
+                statusEl.textContent = '🎉 The rabbit is home! 太棒了!';
+                statusEl.className = 'win';
+                nextBtn.style.display = 'inline-block';
+                resetBtn.style.display = 'none';
+                spawnWinEffects();
+            }
+        }
+
+        function showFeedback(direction, isCorrect, message) {
+            const btn = document.querySelector(`[data-dir="${direction}"]`);
+            
+            if (isCorrect) {
+                btn.classList.add('correct');
+                setTimeout(() => btn.classList.remove('correct'), 250);
+            } else {
+                btn.classList.add('wrong');
+                setTimeout(() => btn.classList.remove('wrong'), 400);
+                if (message) {
+                    statusEl.textContent = message;
+                    statusEl.className = 'lose';
+                    setTimeout(() => {
+                        if (gameActive) {
+                            statusEl.textContent = '';
+                            statusEl.className = '';
+                        }
+                    }, 1200);
+                }
+            }
+        }
+
+        function spawnWinEffects() {
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    const c = document.createElement('div');
+                    c.className = 'carrot-popup';
+                    c.textContent = '🥕';
+                    c.style.left = (Math.random() * window.innerWidth * 0.6 + window.innerWidth * 0.2) + 'px';
+                    c.style.top = (Math.random() * window.innerHeight * 0.4 + window.innerHeight * 0.2) + 'px';
+                    document.body.appendChild(c);
+                    setTimeout(() => c.remove(), 1000);
+                }, i * 150);
+            }
+
+            for (let i = 0; i < 25; i++) {
+                setTimeout(() => {
+                    const p = document.createElement('div');
+                    p.className = 'particle';
+                    p.textContent = ['🌸', '⭐', '🍀', '✨', '🥕'][Math.floor(Math.random() * 5)];
+                    p.style.left = (Math.random() * window.innerWidth) + 'px';
+                    p.style.top = (Math.random() * window.innerHeight * 0.5 + window.innerHeight * 0.25) + 'px';
+                    p.style.fontSize = (Math.random() * 18 + 14) + 'px';
+                    document.body.appendChild(p);
+                    setTimeout(() => p.remove(), 1200);
+                }, i * 60);
+            }
+        }
+
+        function nextLevel() {
+            loadLevel(level);
+        }
+
+        function resetLevel() {
+            loadLevel(level - 1);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            const keyMap = {
+                'ArrowUp': 'up', 'w': 'up', 'W': 'up',
+                'ArrowDown': 'down', 's': 'down', 'S': 'down',
+                'ArrowLeft': 'left', 'a': 'left', 'A': 'left',
+                'ArrowRight': 'right', 'd': 'right', 'D': 'right'
+            };
+            
+            if (keyMap[e.key]) {
+                e.preventDefault();
+                move(keyMap[e.key]);
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>
